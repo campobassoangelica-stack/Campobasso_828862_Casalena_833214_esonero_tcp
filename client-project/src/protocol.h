@@ -5,21 +5,47 @@
  * Definitions, constants and function prototypes for the client
  */
 
+
 #ifndef PROTOCOL_H_
 #define PROTOCOL_H_
 
 #include <stdint.h>
 
-// Shared application parameters
-#define SERVER_PORT 27015  // Server port (change if needed)
-#define BUFFER_SIZE 512    // Buffer size for messages
+// Parametri applicazione
+#define SERVER_PORT 27015
+#define BUFFER_SIZE 512
 
-// Function prototypes
-// Add here the signatures of the functions implemented by students
+// Tipi di dati meteo
+#define TYPE_TEMPERATURE 't'
+#define TYPE_HUMIDITY    'h'
+#define TYPE_WIND        'w'
+#define TYPE_PRESSURE    'p'
 
-/*
- * Example function to implement:
- * int send_datagram(int socket, const char* message, struct sockaddr_in* server_addr);
- */
+// Codici di stato
+#define STATUS_SUCCESS          0
+#define STATUS_CITY_UNAVAILABLE 1
+#define STATUS_INVALID_REQUEST  2
+
+// Struttura richiesta (client → server)
+typedef struct {
+    char type;
+    char city[64];
+} weather_request_t;
+
+// Struttura risposta (server → client)
+typedef struct {
+    uint32_t status;//codice di stato
+    char type; //Eco del tipo richiesto
+    float value; //Valore numerico del dato meteo
+} weather_response_t;
+
+// Prototipi
+void print_usage_client(const char* program_name);
+void print_usage_server(const char* program_name);
+
+float get_temperature(void);
+float get_humidity(void);
+float get_wind(void);
+float get_pressure(void);
 
 #endif /* PROTOCOL_H_ */

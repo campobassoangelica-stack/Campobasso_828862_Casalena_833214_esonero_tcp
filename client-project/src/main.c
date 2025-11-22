@@ -7,66 +7,149 @@
  * portable across Windows, Linux and macOS.
  */
 
-#if defined WIN32
-#include <winsock.h>
-#else
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#define closesocket close
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#define CLOSESOCKET(s) closesocket(s)
+typedef SOCKET socket_t;
+#else
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#define CLOSESOCKET(s) close(s)
+typedef int socket_t;
+#endif
+
 #include "protocol.h"
 
-#define NO_ERROR 0
-
-void clearwinsock() {
-#if defined WIN32
-	WSACleanup();
-#endif
+#ifdef _WIN32
+static int initialize_winsock(void) {
+    WSADATA wsa_data;
+    return WSAStartup(MAKEWORD(2,2), &wsa_data);
 }
+static void cleanup_winsock(void) { WSACleanup(); }
+#else
+static int initialize_winsock(void) { return 0; }
+static void cleanup_winsock(void) {}
+#endif
 
 int main(int argc, char *argv[]) {
+    char *server_ip = "127.0.0.1";   // default server
+    int port = SERVER_PORT;          // default port 27015
+    char type = 0;
+    char city[64] = {0};
 
-	// TODO: Implement client logic
+    // Parsing degli argomenti
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-s") == 0 && i+1 < argc) {
+            server_ip = argv[++i];
+        } else if (strcmp(argv[i], "-p") == 0 && i+1 < argc) {
+            port = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "-r") == 0 && i+2 < argc) {
+            type = argv[i+1][0];
+            strncpy(city, argv[i+2], sizeof(city)-1);
+            break;
+        }
+    }
 
-#if defined WIN32
-	// Initialize Winsock
-	WSADATA wsa_data;
-	int result = WSAStartup(MAKEWORD(2,2), &wsa_data);
-	if (result != NO_ERROR) {
-		printf("Error at WSAStartup()\n");
-		return 0;
-	}
-#endif
+    if (type == 0 || strlen(city) == 0) {
+        print_usage_client(argv[0]);
+        return 1;
+    }
 
-	int my_socket;
+    if (initialize_winsock() != 0) {
+        fprintf(stderr, "Errore Winsock\n");
+        return 1;
+    }
 
-	// TODO: Create UDP socket
-	// my_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        perror("Errore socket");
+        cleanup_winsock();
+        return 1;
+    }
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;       // IPv4
+    hints.ai_socktype = SOCK_STREAM; // TCP
 
-	// TODO: Configure server address
-	// struct sockaddr_in server_addr;
-	// memset(&server_addr, 0, sizeof(server_addr));
-	// server_addr.sin_family = AF_INET;
-	// server_addr.sin_port = htons(SERVER_PORT);
-	// server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    char port_str[16];
+    sprintf(port_str, "%d", port);
 
-	// TODO: Implement communication logic (no connect needed for UDP)
-	// sendto(my_socket, buffer, strlen(buffer), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
-	// recvfrom(my_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr*)&server_addr, &addr_len);
+    if (getaddrinfo(server_ip, port_str, &hints, &res) != 0) {
+        fprintf(stderr, "Errore risoluzione DNS\n");
+        CLOSESOCKET(sock);
+        cleanup_winsock();
+        return 1;
+    }
 
-	// TODO: Close socket
-	// closesocket(my_socket);
+    if (connect(sock, res->ai_addr, res->ai_addrlen) < 0) {
+        perror("Errore connect");
+        freeaddrinfo(res);
+        CLOSESOCKET(sock);
+        cleanup_winsock();
+        return 1;
+    }
 
-	printf("Client terminated.\n");
+    freeaddrinfo(res);
 
-	clearwinsock();
-	return 0;
-} // main end
+
+
+    weather_request_t request;
+    memset(&request, 0, sizeof(request));
+    request.type = type;
+    strncpy(request.city, city, sizeof(request.city)-1);
+
+    send(sock, (const char*)&request, sizeof(request), 0);
+
+    weather_response_t response;
+    int bytes_received = recv(sock, (char*)&response, sizeof(response), 0);
+    if (bytes_received <= 0) {
+        perror("Errore recv");
+        CLOSESOCKET(sock);
+        cleanup_winsock();
+        return 1;
+    }
+
+    response.status = ntohl(response.status);
+
+    printf("Ricevuto risultato dal server ip %s. ", server_ip);
+
+    if (response.status == STATUS_SUCCESS) {
+        switch(response.type) {
+            case TYPE_TEMPERATURE:
+                printf("%s: Temperatura = %.1f°C\n", request.city, response.value);
+                break;
+            case TYPE_HUMIDITY:
+                printf("%s: Umidità = %.1f%%\n", request.city, response.value);
+                break;
+            case TYPE_WIND:
+                printf("%s: Vento = %.1f km/h\n", request.city, response.value);
+                break;
+            case TYPE_PRESSURE:
+                printf("%s: Pressione = %.1f hPa\n", request.city, response.value);
+                break;
+        }
+    } else if (response.status == STATUS_CITY_UNAVAILABLE) {
+        printf("Città non disponibile\n");
+    } else if (response.status == STATUS_INVALID_REQUEST) {
+        printf("Richiesta non valida\n");
+    } else {
+        printf("Errore sconosciuto\n");
+    }
+
+    CLOSESOCKET(sock);
+    cleanup_winsock();
+    return 0;
+}
+
+void print_usage_client(const char* program_name) {
+    printf("Uso: %s [-s server] [-p porta] -r <tipo> <città>\n", program_name);
+    printf("Esempio: %s -s 127.0.0.1 -p 27015 -r t Roma\n", program_name);
+    printf("Tipi: t=temperatura, h=umidità, w=vento, p=pressione\n");
+}
