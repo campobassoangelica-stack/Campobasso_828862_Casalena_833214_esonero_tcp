@@ -1,9 +1,9 @@
 /*
  * main.c
  *
- * UDP Client - Template for Computer Networks assignment
+ * TCP Client - Template for Computer Networks assignment
  *
- * This file contains the boilerplate code for a UDP client
+ * This file contains the boilerplate code for a TCP client
  * portable across Windows, Linux and macOS.
  */
 
@@ -39,7 +39,7 @@ static void cleanup_winsock(void) {}
 #endif
 
 int main(int argc, char *argv[]) {
-    char *server_ip = "127.0.0.1";   // default server
+    char *server_ip = "localhost";   // default server
     int port = SERVER_PORT;          // default port 27015
     char type = 0;
     char city[64] = {0};
