@@ -27,18 +27,17 @@
 #define STATUS_INVALID_REQUEST  2
 
 // Struttura richiesta (client → server)
-typedef struct {
+struct request {
     char type;
     char city[64];
-} weather_request_t;
+};
 
 // Struttura risposta (server → client)
 typedef struct {
-    uint32_t status;//codice di stato
-    char type; //Eco del tipo richiesto
-    float value; //Valore numerico del dato meteo
+    unsigned int status; // codice di stato
+    char type;           // eco del tipo richiesto
+    float value;         // valore numerico del dato meteo
 } weather_response_t;
-
 // Prototipi
 void print_usage_client(const char* program_name);
 void print_usage_server(const char* program_name);

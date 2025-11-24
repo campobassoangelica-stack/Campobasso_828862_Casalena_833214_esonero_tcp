@@ -21,6 +21,7 @@ typedef SOCKET socket_t;
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #define CLOSESOCKET(s) close(s)
 typedef int socket_t;
 #endif
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]) {
         cleanup_winsock();
         return 1;
     }
+
     struct addrinfo hints, *res;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;       // IPv4
@@ -98,15 +100,15 @@ int main(int argc, char *argv[]) {
 
     freeaddrinfo(res);
 
+    // --- Struttura richiesta coerente con protocol.h ---
+    struct request req;
+    memset(&req, 0, sizeof(req));
+    req.type = type;
+    strncpy(req.city, city, sizeof(req.city)-1);
 
+    send(sock, (const char*)&req, sizeof(req), 0);
 
-    weather_request_t request;
-    memset(&request, 0, sizeof(request));
-    request.type = type;
-    strncpy(request.city, city, sizeof(request.city)-1);
-
-    send(sock, (const char*)&request, sizeof(request), 0);
-
+    // --- Struttura risposta coerente con protocol.h ---
     weather_response_t response;
     int bytes_received = recv(sock, (char*)&response, sizeof(response), 0);
     if (bytes_received <= 0) {
@@ -116,6 +118,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Conversione endianness del campo status
     response.status = ntohl(response.status);
 
     printf("Ricevuto risultato dal server ip %s. ", server_ip);
@@ -123,16 +126,16 @@ int main(int argc, char *argv[]) {
     if (response.status == STATUS_SUCCESS) {
         switch(response.type) {
             case TYPE_TEMPERATURE:
-                printf("%s: Temperatura = %.1f°C\n", request.city, response.value);
+                printf("%s: Temperatura = %.1f°C\n", req.city, response.value);
                 break;
             case TYPE_HUMIDITY:
-                printf("%s: Umidità = %.1f%%\n", request.city, response.value);
+                printf("%s: Umidità = %.1f%%\n", req.city, response.value);
                 break;
             case TYPE_WIND:
-                printf("%s: Vento = %.1f km/h\n", request.city, response.value);
+                printf("%s: Vento = %.1f km/h\n", req.city, response.value);
                 break;
             case TYPE_PRESSURE:
-                printf("%s: Pressione = %.1f hPa\n", request.city, response.value);
+                printf("%s: Pressione = %.1f hPa\n", req.city, response.value);
                 break;
         }
     } else if (response.status == STATUS_CITY_UNAVAILABLE) {

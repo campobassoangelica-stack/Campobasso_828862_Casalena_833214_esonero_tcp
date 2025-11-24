@@ -7,7 +7,6 @@
  * portable across Windows, Linux and macOS.
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,7 +64,6 @@ static int validate_city(const char* city) {
     return 1;
 }
 
-
 // Funzioni meteo simulate
 float get_temperature(void) { return -10.0f + (rand() % 501) / 10.0f; }   // -10.0 → 40.0
 float get_humidity(void)    { return 20.0f + (rand() % 801) / 10.0f; }    // 20.0 → 100.0
@@ -76,10 +74,10 @@ int main(int argc,char *argv[]) {
     srand((unsigned int)time(NULL));
 
     // Gestione porta da riga di comando
-        int port = SERVER_PORT;  // default 27015
-        if (argc == 3 && strcmp(argv[1], "-p") == 0) {
-            port = atoi(argv[2]);
-        }
+    int port = SERVER_PORT;  // default 27015
+    if (argc == 3 && strcmp(argv[1], "-p") == 0) {
+        port = atoi(argv[2]);
+    }
 
     if (initialize_winsock() != 0) {
         fprintf(stderr, "Errore Winsock\n");
@@ -120,35 +118,36 @@ int main(int argc,char *argv[]) {
         socket_t client_sock = accept(server_sock, (struct sockaddr*)&client_addr, &client_len);
         if (client_sock < 0) { perror("Errore accept"); continue; }
 
-        weather_request_t request;
-        weather_response_t response;
-        memset(&request, 0, sizeof(request));
+        struct request req;          // <-- uso la struct request definita in protocol.h
+        weather_response_t response; // <-- uso la struct risposta definita in protocol.h
+        memset(&req, 0, sizeof(req));
         memset(&response, 0, sizeof(response));
 
-        int bytes_received = recv(client_sock, (char*)&request, sizeof(request), 0);
+        int bytes_received = recv(client_sock, (char*)&req, sizeof(req), 0);
         if (bytes_received <= 0) { perror("Errore recv"); CLOSESOCKET(client_sock); continue; }
 
         printf("Richiesta '%c %s' dal client ip %s\n",
-        		request.type, request.city, inet_ntoa(client_addr.sin_addr));
+               req.type, req.city, inet_ntoa(client_addr.sin_addr));
 
         // Elaborazione richiesta
-        if (request.type!=TYPE_TEMPERATURE && request.type!=TYPE_HUMIDITY &&
-            request.type!=TYPE_WIND && request.type!=TYPE_PRESSURE) {
+        if (req.type!=TYPE_TEMPERATURE && req.type!=TYPE_HUMIDITY &&
+            req.type!=TYPE_WIND && req.type!=TYPE_PRESSURE) {
             response.status = STATUS_INVALID_REQUEST;
-        } else if (!validate_city(request.city) || !is_city_supported(request.city)) {
+        } else if (!validate_city(req.city) || !is_city_supported(req.city)) {
             response.status = STATUS_CITY_UNAVAILABLE;
         } else {
             response.status = STATUS_SUCCESS;
-            response.type = request.type;
-            switch(request.type) {
+            response.type = req.type;
+            switch(req.type) {
                 case TYPE_TEMPERATURE: response.value = get_temperature(); break;
                 case TYPE_HUMIDITY:    response.value = get_humidity();    break;
                 case TYPE_WIND:        response.value = get_wind();        break;
                 case TYPE_PRESSURE:    response.value = get_pressure();    break;
             }
         }
+
         // Conversione status in network order
-        uint32_t net_status = htonl(response.status);
+        unsigned int net_status = htonl(response.status);
         memcpy(&response.status, &net_status, sizeof(net_status));
 
         // Invio risposta
