@@ -28,16 +28,17 @@
 
 // Struttura richiesta (client → server)
 struct request {
-    char type;
-    char city[64];
+    char type;      // 't'=temperatura, 'h'=umidità, 'w'=vento, 'p'=pressione
+    char city[64];  // nome città (null-terminated)
 };
 
 // Struttura risposta (server → client)
-typedef struct {
-    unsigned int status; // codice di stato
-    char type;           // eco del tipo richiesto
-    float value;         // valore numerico del dato meteo
-} weather_response_t;
+struct response {
+    unsigned int status;  // 0=successo, 1=città non trovata, 2=richiesta invalida
+    char type;            // eco del tipo richiesto
+    float value;          // dato meteo generato
+};
+
 // Prototipi
 void print_usage_client(const char* program_name);
 void print_usage_server(const char* program_name);

@@ -119,7 +119,7 @@ int main(int argc,char *argv[]) {
         if (client_sock < 0) { perror("Errore accept"); continue; }
 
         struct request req;          // <-- uso la struct request definita in protocol.h
-        weather_response_t response; // <-- uso la struct risposta definita in protocol.h
+       struct response response; // <-- uso la struct risposta definita in protocol.h
         memset(&req, 0, sizeof(req));
         memset(&response, 0, sizeof(response));
 

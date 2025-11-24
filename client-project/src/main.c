@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
     send(sock, (const char*)&req, sizeof(req), 0);
 
     // --- Struttura risposta coerente con protocol.h ---
-    weather_response_t response;
+    struct response response;
     int bytes_received = recv(sock, (char*)&response, sizeof(response), 0);
     if (bytes_received <= 0) {
         perror("Errore recv");

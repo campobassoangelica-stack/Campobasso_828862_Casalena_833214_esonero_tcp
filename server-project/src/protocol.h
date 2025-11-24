@@ -5,6 +5,7 @@
  * Definitions, constants and function prototypes for the client
  */
 
+
 #ifndef PROTOCOL_H_
 #define PROTOCOL_H_
 
@@ -26,17 +27,17 @@
 #define STATUS_INVALID_REQUEST  2
 
 // Struttura richiesta (client → server)
-typedef struct {
-    char type;
-    char city[64];
-} weather_request_t;
+struct request {
+    char type;      // 't'=temperatura, 'h'=umidità, 'w'=vento, 'p'=pressione
+    char city[64];  // nome città (null-terminated)
+};
 
 // Struttura risposta (server → client)
-typedef struct {
-    uint32_t status; //Codice di stato
-    char type; //Eco del tipo richiesto
-    float value; //Valore numerico del dato meteo
-} weather_response_t;
+struct response {
+    unsigned int status;  // 0=successo, 1=città non trovata, 2=richiesta invalida
+    char type;            // eco del tipo richiesto
+    float value;          // dato meteo generato
+};
 
 // Prototipi
 void print_usage_client(const char* program_name);
