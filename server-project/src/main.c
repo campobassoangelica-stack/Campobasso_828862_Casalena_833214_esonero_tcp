@@ -8,28 +8,24 @@
  */
 
 // Inclusioni librerie di rete e compatibilità Windows/Linux/macOS
-#if defined WIN32
-#include <winsock.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-typedef int socklen_t;
-#define strcasecmp _stricmp
-#else
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <strings.h>
-#define closesocket close
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 #include <time.h>
 #include "protocol.h"
+#if defined WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#define closesocket close
+#endif
 
 // Lista città supportate
 static const char *SUPPORTED_CITIES[] = {

@@ -10,9 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <ctype.h>
 #if defined WIN32
-#include <winsock.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
