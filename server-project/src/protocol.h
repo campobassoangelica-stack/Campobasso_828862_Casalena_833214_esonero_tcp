@@ -1,51 +1,46 @@
-/*
- * protocol.h
- *
- * Client header file
- * Definitions, constants and function prototypes for the client
- */
-
-
 #ifndef PROTOCOL_H_
 #define PROTOCOL_H_
 
-#include <stdint.h>
+// Shared application parameters
+#define SERVER_PORT 56700   // Server port (change if needed)
+#define BUFFER_SIZE 512     // Buffer size for messages
+#define DEFAULT_IP "127.0.0.1"
+#define QUEUE_SIZE 5        // Max pending connections
 
-// Parametri applicazione
-#define SERVER_PORT 27015
-#define BUFFER_SIZE 512
-
-// Tipi di dati meteo
+//Tipi di dati meteo validi
 #define TYPE_TEMPERATURE 't'
-#define TYPE_HUMIDITY    'h'
-#define TYPE_WIND        'w'
-#define TYPE_PRESSURE    'p'
+#define TYPE_HUMIDITY 'h'
+#define TYPE_WIND 'w'
+#define TYPE_PRESSURE 'p'
 
-// Codici di stato
-#define STATUS_SUCCESS          0
-#define STATUS_CITY_UNAVAILABLE 1
-#define STATUS_INVALID_REQUEST  2
+//codici di stato validi
 
-// Struttura richiesta (client → server)
-struct request {
-    char type;      // 't'=temperatura, 'h'=umidità, 'w'=vento, 'p'=pressione
-    char city[64];  // nome città (null-terminated)
-};
+#define STATUS_SUCCESS 0 //Successo
+#define STATUS_CITY_UNAVAILABLE 1 //città non disponibile
+#define STATUS_INVALID_REQUEST 2 //richiesta non valida
 
-// Struttura risposta (server → client)
-struct response {
-    unsigned int status;  // 0=successo, 1=città non trovata, 2=richiesta invalida
-    char type;            // eco del tipo richiesto
-    float value;          // dato meteo generato
-};
 
-// Prototipi
-void print_usage_client(const char* program_name);
-void print_usage_server(const char* program_name);
+//struttura richiesta client--> server
+typedef struct {
+    char type;        // Weather data type: 't', 'h', 'w', 'p'
+    char city[64];    // City name (null-terminated string)
+} weather_request_t;
 
-float get_temperature(void);
-float get_humidity(void);
-float get_wind(void);
-float get_pressure(void);
+//struttura risposta server-->client
+typedef struct {
+    unsigned int status;  // Response status code
+    char type;            // Echo of request type
+    float value;          // Weather data value
+} weather_response_t;
 
+
+//prototipi funzioni comuni
+void errorhandler(char *errorMessage);
+void clearwinsock();
+
+//prototipi funzioni di generazione dati server
+float get_temperature(void);    // Range: -10.0 to 40.0 °C
+float get_humidity(void);       // Range: 20.0 to 100.0 %
+float get_wind(void);           // Range: 0.0 to 100.0 km/h
+float get_pressure(void);       // Range: 950.0 to 1050.0 hPa
 #endif /* PROTOCOL_H_ */
